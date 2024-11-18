@@ -1,0 +1,122 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Index
+{% endblock %}
+
+{% block main %}
+    <div class="row">
+        <!-- Left Side -->
+        <div class="col-md-4">
+            <h2>Document Your Day</h2>
+            <form id="activityForm" action="/" method="post">
+                <div class="mb-3">
+                    <label for="dateInput">Select Date</label>
+                    <input class="form-control mx-auto w-50" type="date" id="dateInput" value="{{ selected_date }}" required>
+                    <input type="hidden" id="selectedDate" name="selected_date" value="{{ selected_date }}">
+                </div>
+                <div class="mb-3">
+                    <input class="form-control mx-auto w-50" name="startTime" type="time" id="startTimeInput" required>
+                </div>
+                <div class="mb-3">
+                    <input class="form-control mx-auto w-50" name="endTime" type="time" id="endTimeInput" required>
+                </div>
+                <div class="mb-3">
+                    <input class="form-control mx-auto w-50" name="activity" placeholder="Enter your activity" type="text" minlength="4" maxlength="20" required>
+                </div>
+                <div class="mb-3">
+                    <select name="area" class="form-control mx-auto w-50" required>
+                        <option value="" disabled selected>Select an area</option>
+                        {% for area in areas %}
+                        <option value="{{ area['id'] }}">{{ area['area_name'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+    
+                <button class="btn btn-primary" type="submit">Register</button>
+            </form>
+        </div>
+
+        <!-- Right Side -->
+        <div class="col-md-6">
+            <h2>Time Spent per Area</h2>
+            <p>Select a date to view the data.</p>
+
+            <!-- Date Select Button for table data -->
+            <div class="mb-3">
+                <label for="tableDateInput">Select Date for Table</label>
+                <input class="form-control w-50  mx-auto"  type="date" id="tableDateInput" value="{{ selected_date }}" required>
+            </div>
+    
+            {% if table_data %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Activity Name</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Area Name</th>
+                            <th>Total Time (hours)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in table_data %}
+                        <tr>
+                            <td>{{ entry.activity_name }}</td>
+                            <td>{{ entry.start_time }}</td>
+                            <td>{{ entry.end_time }}</td>
+                            <td>{{ entry.area_name }}</td>
+                            <td>{{ entry.total_time | round(2) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No data available for the selected date.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("dateInput").addEventListener("change", async function () {
+            const selectedDate = this.value;
+            const response = await fetch(`/latest_end_time?date=${selectedDate}`);
+            const latestEndTime = await response.json();
+
+            if (latestEndTime.end_time) {
+                // Automatically set the start time input if a previous end time is found
+                document.getElementById("startTimeInput").value = latestEndTime.end_time;
+            } else {
+                // If no previous activities, clear the start time input
+                document.getElementById("startTimeInput").value = '';
+            }
+
+            // Update the hidden date input
+            document.getElementById("selectedDate").value = selectedDate;
+        });
+
+        // Handle form submission with auto-updating start time
+        document.getElementById("activityForm").addEventListener("submit", async function (event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const selectedDate = document.getElementById("selectedDate").value;
+            const response = await fetch(`/latest_end_time?date=${selectedDate}`);
+            const latestEndTime = await response.json();
+
+            if (latestEndTime.end_time) {
+                // Set the start time input value to the latest end time
+                document.getElementById("startTimeInput").value = latestEndTime.end_time;
+            }
+
+            // Proceed with form submission
+            this.submit();
+        });
+
+        // Update the table based on the selected date
+        document.getElementById("tableDateInput").addEventListener("change", function () {
+            const selectedTableDate = this.value;
+            window.location.href = `/?date=${selectedTableDate}`;
+        });
+    </script>
+      
+{% endblock %}
